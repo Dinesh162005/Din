@@ -1,0 +1,356 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>ShopStarter — Simple E‑commerce Demo</title>
+  <meta name="description" content="Single-file HTML/CSS/JS e-commerce demo with cart and admin panel (localStorage)" />
+  <style>
+    /* ====== BASIC RESET ====== */
+    *{box-sizing:border-box;margin:0;padding:0}
+    html,body{height:100%}
+    body{font-family:Inter, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial; background:#f5f7fb;color:#111}
+
+    /* ====== LAYOUT ====== */
+    .container{max-width:1100px;margin:28px auto;padding:16px}
+    header{background:#fff;border-radius:10px;padding:14px 18px;display:flex;align-items:center;justify-content:space-between;box-shadow:0 6px 18px rgba(12,20,50,0.06)}
+    .brand{display:flex;gap:12px;align-items:center}
+    .logo{width:44px;height:44px;border-radius:8px;background:linear-gradient(135deg,#6366f1,#7c3aed);display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700}
+    nav{display:flex;gap:12px;align-items:center}
+    a.btn{display:inline-block;padding:8px 12px;border-radius:8px;text-decoration:none;border:1px solid #e6e9f2;background:#fff}
+    a.cta{background:#6d28d9;color:#fff;border:none}
+
+    /* ====== HERO ====== */
+    .hero{margin-top:18px;background:linear-gradient(90deg,#7c3aed 0%, #4f46e5 100%);color:#fff;padding:22px;border-radius:10px;box-shadow:0 8px 30px rgba(79,70,229,0.12)}
+    .hero h1{font-size:22px}
+    .hero p{margin-top:8px;opacity:0.95}
+
+    /* ====== GRID ====== */
+    .grid{display:grid;grid-template-columns:1fr 320px;gap:18px;margin-top:18px}
+    .products{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+    .card{background:#fff;border-radius:10px;overflow:hidden;box-shadow:0 6px 18px rgba(12,20,50,0.04);display:flex;flex-direction:column}
+    .card img{width:100%;height:160px;object-fit:cover}
+    .card .info{padding:10px}
+    .card h3{font-size:16px}
+    .card p{font-size:13px;color:#666;margin-top:6px}
+    .price-row{display:flex;align-items:center;justify-content:space-between;margin-top:10px}
+    .price{font-weight:700}
+    .card button{padding:8px 10px;border-radius:8px;border:none;background:#6d28d9;color:#fff;cursor:pointer}
+
+    /* ====== SIDEBAR CART ====== */
+    .sidebar{background:#fff;border-radius:10px;padding:12px;min-height:220px;box-shadow:0 6px 18px rgba(12,20,50,0.04)}
+    .cart-item{display:flex;gap:10px;align-items:center;border-bottom:1px dashed #eee;padding:10px 0}
+    .cart-item .meta{flex:1}
+    .cart-actions{display:flex;gap:8px;justify-content:flex-end;margin-top:12px}
+    .muted{color:#6b7280;font-size:13px}
+
+    /* ====== PRODUCT MODAL / DETAIL ====== */
+    .modal{position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:rgba(10,10,20,0.45);z-index:80}
+    .modal.open{display:flex}
+    .modal-card{width:920px;max-width:96%;background:#fff;border-radius:12px;padding:16px;display:grid;grid-template-columns:1fr 320px;gap:12px}
+    .modal-card img{width:100%;height:320px;object-fit:cover;border-radius:8px}
+
+    /* ====== ADMIN PANEL ====== */
+    .admin{margin-top:18px;background:#fff;padding:12px;border-radius:10px;box-shadow:0 6px 18px rgba(12,20,50,0.04)}
+    .admin-grid{display:grid;grid-template-columns:1fr 320px;gap:12px}
+    .form-row{display:flex;gap:8px;margin-bottom:8px}
+    input,textarea{padding:8px;border-radius:8px;border:1px solid #e6e9f2;width:100%}
+    textarea{min-height:80px}
+
+    /* ====== RESPONSIVE ====== */
+    @media (max-width:980px){
+      .grid{grid-template-columns:1fr}
+      .products{grid-template-columns:repeat(2,1fr)}
+      .modal-card{grid-template-columns:1fr}
+    }
+    @media (max-width:640px){
+      .products{grid-template-columns:1fr}
+      header{flex-direction:column;gap:12px;align-items:flex-start}
+      nav{width:100%;justify-content:space-between}
+    }
+
+    /* small utilities */
+    .text-right{text-align:right}
+    .small{font-size:13px}
+    .hidden{display:none}
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <div class="brand">
+        <div class="logo">S</div>
+        <div>
+          <div style="font-weight:700">ShopStarter</div>
+          <div class="muted" style="font-size:13px">HTML • CSS • JavaScript demo</div>
+        </div>
+      </div>
+      <nav>
+        <div class="muted small">Demo: data saved in localStorage</div>
+        <a href="#" id="adminBtn" class="btn">Admin</a>
+        <a href="#" id="viewCartBtn" class="btn cta">View Cart (<span id="cartCount">0</span>)</a>
+      </nav>
+    </header>
+
+    <section class="hero">
+      <h1>Build your store. Sell fast.</h1>
+      <p>Single-file e‑commerce demo with product listing, product detail, cart and an admin panel. Save as <strong>index.html</strong> and open in your browser.</p>
+    </section>
+
+    <div class="grid">
+      <div>
+        <h2 style="margin-top:12px">Products</h2>
+        <div id="products" class="products" aria-live="polite"></div>
+      </div>
+
+      <aside class="sidebar" aria-labelledby="cartTitle">
+        <h3 id="cartTitle">Your cart</h3>
+        <div id="cartList" style="margin-top:8px"></div>
+        <div class="cart-actions">
+          <button id="clearCartBtn" class="btn">Clear</button>
+          <button id="checkoutBtn" class="btn cta">Checkout</button>
+        </div>
+        <div style="margin-top:10px" class="muted small">Checkout is a demo alert. Integrate a payment gateway for real payments.</div>
+      </aside>
+    </div>
+
+    <!-- Admin area (toggle) -->
+    <div id="adminPanel" class="admin hidden">
+      <h3>Admin panel</h3>
+      <div class="admin-grid">
+        <div>
+          <form id="addProductForm">
+            <div class="form-row">
+              <input id="pTitle" placeholder="Title" required />
+              <input id="pPrice" placeholder="Price (INR) e.g. 499" required />
+            </div>
+            <div class="form-row">
+              <input id="pImg" placeholder="Image URL (optional)" />
+            </div>
+            <div class="form-row">
+              <textarea id="pDesc" placeholder="Description"></textarea>
+            </div>
+            <div class="form-row">
+              <button type="submit" class="btn cta">Add product</button>
+              <button id="closeAdmin" type="button" class="btn">Close</button>
+            </div>
+          </form>
+        </div>
+        <div>
+          <h4>Products</h4>
+          <div id="adminProducts" style="margin-top:8px"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- PRODUCT MODAL -->
+    <div id="modal" class="modal" role="dialog" aria-modal="true" aria-hidden="true">
+      <div class="modal-card">
+        <div>
+          <img id="modalImg" src="" alt="product image">
+          <h2 id="modalTitle" style="margin-top:8px"></h2>
+          <p id="modalDesc" style="margin-top:6px;color:#444"></p>
+        </div>
+        <aside>
+          <div class="muted small">Price</div>
+          <div id="modalPrice" style="font-weight:700;margin-top:6px;font-size:20px"></div>
+          <div style="margin-top:12px">
+            <button id="modalAddBtn" class="btn cta">Add to cart</button>
+            <button id="modalCloseBtn" class="btn" style="margin-left:8px">Close</button>
+          </div>
+        </aside>
+      </div>
+    </div>
+
+    <footer style="margin-top:18px;text-align:center;color:#6b7280;font-size:13px">Demo • not for production • admin password (client only): <span style="font-family:monospace">admin123</span></footer>
+  </div>
+
+  <script>
+    /***************
+     * Single-file e-commerce demo
+     * - products & cart stored in localStorage
+     * - admin panel protected by a simple password prompt (client-side, demo only)
+     ***************/
+
+    // ---------- Utilities ----------
+    const $ = (sel, ctx = document) => ctx.querySelector(sel);
+    const $$ = (sel, ctx = document) => Array.from(ctx.querySelectorAll(sel));
+
+    function fmtPrice(v){ return '₹' + (v/100).toFixed(2); }
+
+    // ---------- Storage keys ----------
+    const PKEY = 'shop_html_products_v1';
+    const CKEY = 'shop_html_cart_v1';
+
+    // ---------- Default products ----------
+    const defaultProducts = [
+      {id:'p1',title:'Classic Tee',price:49900,desc:'Comfortable cotton t-shirt',img:'https://placehold.co/800x600?text=Classic+Tee'},
+      {id:'p2',title:'Denim Jacket',price:199900,desc:'Stylish denim jacket',img:'https://placehold.co/800x600?text=Denim+Jacket'},
+      {id:'p3',title:'Running Shoes',price:249900,desc:'Lightweight running shoes',img:'https://placehold.co/800x600?text=Running+Shoes'},
+      {id:'p4',title:'Casual Cap',price:29900,desc:'One-size casual cap',img:'https://placehold.co/800x600?text=Casual+Cap'},
+      {id:'p5',title:'Socks Pack',price:59900,desc:'Pack of 3 socks',img:'https://placehold.co/800x600?text=Socks+Pack'}
+    ];
+
+    // load/save
+    function loadProducts(){
+      try{ const s = localStorage.getItem(PKEY); if(!s) { localStorage.setItem(PKEY, JSON.stringify(defaultProducts)); return defaultProducts; } return JSON.parse(s);}catch(e){return defaultProducts}
+    }
+    function saveProducts(arr){ localStorage.setItem(PKEY, JSON.stringify(arr)); }
+
+    function loadCart(){ try{ const s = localStorage.getItem(CKEY); return s?JSON.parse(s):{} }catch(e){return{}} }
+    function saveCart(c){ localStorage.setItem(CKEY, JSON.stringify(c)); }
+
+    // ---------- App state ----------
+    let products = loadProducts();
+    let cart = loadCart();
+
+    // ---------- DOM refs ----------
+    const productsEl = $('#products');
+    const cartListEl = $('#cartList');
+    const cartCountEl = $('#cartCount');
+    const clearCartBtn = $('#clearCartBtn');
+    const checkoutBtn = $('#checkoutBtn');
+
+    const modal = $('#modal');
+    const modalImg = $('#modalImg');
+    const modalTitle = $('#modalTitle');
+    const modalDesc = $('#modalDesc');
+    const modalPrice = $('#modalPrice');
+    const modalAddBtn = $('#modalAddBtn');
+    const modalCloseBtn = $('#modalCloseBtn');
+
+    const adminPanel = $('#adminPanel');
+    const adminBtn = $('#adminBtn');
+    const addProductForm = $('#addProductForm');
+    const adminProductsEl = $('#adminProducts');
+    const viewCartBtn = $('#viewCartBtn');
+
+    // ---------- Render functions ----------
+    function renderProducts(){
+      productsEl.innerHTML = '';
+      products.forEach(p => {
+        const el = document.createElement('div'); el.className='card';
+        el.innerHTML = `
+          <img src="${p.img}" alt="${escapeHtml(p.title)}">
+          <div class="info">
+            <h3>${escapeHtml(p.title)}</h3>
+            <p>${escapeHtml(p.desc)}</p>
+            <div class="price-row">
+              <div class="price">${fmtPrice(p.price)}</div>
+              <div>
+                <button data-id="${p.id}" class="openBtn">View</button>
+                <button data-id="${p.id}" class="addBtn">Add</button>
+              </div>
+            </div>
+          </div>
+        `;
+        productsEl.appendChild(el);
+      });
+      // attach events
+      $$('.addBtn', productsEl).forEach(b => b.addEventListener('click', onAddClick));
+      $$('.openBtn', productsEl).forEach(b => b.addEventListener('click', onOpenClick));
+    }
+
+    function renderCart(){
+      cartListEl.innerHTML='';
+      const items = Object.entries(cart).map(([id,qty]) => {
+        const p = products.find(x=>x.id===id) || {title:'(removed)',price:0};
+        return {id,qty,title:p.title,price:p.price};
+      });
+      if(items.length===0){ cartListEl.innerHTML='<div class="muted">Cart is empty</div>'; cartCountEl.textContent='0'; return; }
+      items.forEach(it=>{
+        const div = document.createElement('div'); div.className='cart-item';
+        div.innerHTML = `
+          <div class="meta">
+            <div style="font-weight:600">${escapeHtml(it.title)}</div>
+            <div class="small muted">${fmtPrice(it.price)} × ${it.qty}</div>
+          </div>
+          <div class="qty">
+            <button class="btn dec" data-id="${it.id}">-</button>
+            <button class="btn inc" data-id="${it.id}">+</button>
+          </div>
+        `;
+        cartListEl.appendChild(div);
+      });
+      $$('.inc', cartListEl).forEach(b=>b.addEventListener('click', e=>{
+        const id = e.currentTarget.dataset.id; addToCart(id); renderCart();
+      }));
+      $$('.dec', cartListEl).forEach(b=>b.addEventListener('click', e=>{
+        const id = e.currentTarget.dataset.id; removeFromCart(id); renderCart();
+      }));
+      cartCountEl.textContent = items.reduce((s,i)=>s+i.qty,0);
+    }
+
+    function renderAdminProducts(){
+      adminProductsEl.innerHTML='';
+      products.forEach(p=>{
+        const d = document.createElement('div'); d.style.padding='8px 0'; d.style.borderBottom='1px solid #f1f3f8';
+        d.innerHTML = `<div style="display:flex;justify-content:space-between;align-items:center"><div><div style='font-weight:600'>${escapeHtml(p.title)}</div><div class='small muted'>${fmtPrice(p.price)}</div></div><div><button data-id='${p.id}' class='btn del'>Delete</button></div></div>`;
+        adminProductsEl.appendChild(d);
+      });
+      $$('.del', adminProductsEl).forEach(b=>b.addEventListener('click', e=>{ const id=e.currentTarget.dataset.id; if(confirm('Delete product?')){ products = products.filter(x=>x.id!==id); saveProducts(products); renderProducts(); renderAdminProducts(); renderCart(); }}));
+    }
+
+    // ---------- Cart manipulation ----------
+    function addToCart(id, qty=1){ cart[id] = (cart[id]||0) + qty; saveCart(cart); renderCart(); }
+    function removeFromCart(id){ if(!cart[id]) return; cart[id] -= 1; if(cart[id] <=0) delete cart[id]; saveCart(cart); }
+    function clearCart(){ cart={}; saveCart(cart); renderCart(); }
+
+    // ---------- Product detail modal ----------
+    let currentOpen = null;
+    function onOpenClick(e){ const id = e.currentTarget.dataset.id; openModal(id); }
+    function openModal(id){ const p = products.find(x=>x.id===id); if(!p) return; currentOpen = p.id; modalImg.src = p.img; modalTitle.textContent = p.title; modalDesc.textContent = p.desc; modalPrice.textContent = fmtPrice(p.price); modal.classList.add('open'); modal.setAttribute('aria-hidden','false'); }
+    function closeModal(){ modal.classList.remove('open'); modal.setAttribute('aria-hidden','true'); currentOpen = null; }
+
+    modalCloseBtn.addEventListener('click', closeModal);
+    modal.addEventListener('click', (e)=>{ if(e.target === modal) closeModal(); });
+    modalAddBtn.addEventListener('click', ()=>{ if(currentOpen) addToCart(currentOpen); renderCart(); alert('Added to cart'); });
+
+    // ---------- Events ----------
+    function onAddClick(e){ const id = e.currentTarget.dataset.id; addToCart(id); renderCart(); }
+
+    clearCartBtn.addEventListener('click', ()=>{ if(confirm('Clear cart?')){ clearCart(); } });
+    checkoutBtn.addEventListener('click', ()=>{ if(Object.keys(cart).length===0){ alert('Cart is empty'); return; } alert('Checkout demo — integrate a payment gateway for real payments'); });
+
+    viewCartBtn.addEventListener('click', ()=>{ window.scrollTo({top:document.body.scrollHeight,behavior:'smooth'}); });
+
+    // ---------- Admin flow ----------
+    adminBtn.addEventListener('click', async ()=>{
+      const ok = prompt('Enter admin password (demo):');
+      if(ok === 'admin123'){
+        adminPanel.classList.remove('hidden');
+        adminPanel.scrollIntoView({behavior:'smooth'});
+        renderAdminProducts();
+      } else if(ok === null){ /* cancel */ } else { alert('Wrong password'); }
+    });
+
+    $('#closeAdmin').addEventListener('click', ()=>{ adminPanel.classList.add('hidden'); });
+
+    addProductForm.addEventListener('submit', e=>{
+      e.preventDefault();
+      const title = $('#pTitle').value.trim();
+      const priceText = $('#pPrice').value.trim();
+      const img = $('#pImg').value.trim() || 'https://placehold.co/800x600?text=New+Product';
+      const desc = $('#pDesc').value.trim();
+      if(!title || !priceText){ alert('Provide title and price'); return; }
+      const priceNum = Math.round(Number(priceText) * 100);
+      if(Number.isNaN(priceNum)){ alert('Invalid price'); return; }
+      const id = 'p' + Math.random().toString(36).slice(2,9);
+      products.unshift({id,title,price:priceNum,desc,img});
+      saveProducts(products);
+      renderProducts(); renderAdminProducts();
+      addProductForm.reset();
+    });
+
+    // ---------- Helpers ----------
+    function escapeHtml(s){ return String(s).replace(/[&<>"]+/g, (m)=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m])); }
+
+    // ---------- Init ----------
+    function init(){ renderProducts(); renderCart(); }
+    init();
+
+    // expose small debug helpers (optional)
+    window.shop = { products, cart, saveProducts, saveCart };
+  </script>
+</body>
+</html>
